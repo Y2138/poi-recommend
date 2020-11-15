@@ -2,7 +2,9 @@ import Axios from 'axios'
 
 // let envCode = 'qa.'
 // const base_url = `http://gtw-wx.${envCode}enmonster.com`
-const base_url = `http://10.208.201.170:8888/gs03`
+
+// const base_url = `http://10.208.201.170:8888/gs03` //本地
+const base_url = `http://dkfsbd.emmars.net/gs03`
 
 const service = Axios.create({
   baseURL: base_url, // 基础url

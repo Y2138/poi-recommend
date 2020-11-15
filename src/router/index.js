@@ -6,8 +6,7 @@ Vue.use(Router)
 const routes = [
   {
     path: '/',
-    name: 'Home',
-    // component: () => import('@/views/home'),
+    name: 'main',
     redirect: '/home'
   },
   {
@@ -19,7 +18,7 @@ const routes = [
 ]
 
 export default new Router({
-  mode: 'history',
+  mode: 'hash',
   scrollBehavior: () => ({ y: 0 }),
   routes
 })

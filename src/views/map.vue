@@ -27,7 +27,7 @@ export default {
       mouseTool: null, // 鼠标编辑工具
       isSelect: false,
       overlays: null, // 所选区域
-      markerList: [], // 地图选点
+      currentMarker: null, // 地图选点
       hasHeat: false, // 有热力图数据
       showHeat: false, // 显示热力图
     }
@@ -38,8 +38,8 @@ export default {
   methods: {
     // 初始化map
     initMap () {
-      // let center = [120.19, 30.25]
-      let center = [104.06, 30.64]
+      let center = [120.19, 30.25] // 杭州
+      // let center = [104.06, 30.64] // 成都（测试）
       this.map = new AMap.Map('map-container', {
         center, // 设置地图中心点坐标
         zoom: 10.5, // 设置地图缩放级别
@@ -68,26 +68,26 @@ export default {
     },
     // 鼠标绑定点击事件
     async handleClickMap (e) {
-      if (!e) return
-
+      if (!e || !this.heatMap) return
+      if (this.currentMarker) {
+        this.map.remove(this.currentMarker)
+      }
       console.log('click point: ', e.lnglat)
-      let marker = new AMap.Marker({
+      this.currentMarker = new AMap.Marker({
         position: e.lnglat,
         map: this.map
       })
       let mContent = await this.getPotContent(e.lnglat)
-      marker.content = `
+      this.currentMarker.content = mContent.shopCnt ? `
+        <h3>推荐指数：${mContent.count}%</h3>
         <p>门店数量：${mContent.shopCnt || ''}</p>
         <p>门店日均收益均值：${mContent.dailyAvgGmv || ''}</p>
         <p>门店日均订单量：${mContent.dailyAvgOrdQt || ''}</p>
         <p>单宝收益均值：${mContent.unitgmv || ''}</p>
-      `
-      // TODO 调接口查content
-      marker.on('mouseover', this.openInfo)
-      marker.on('mouseout', this.closeInfo)
-      marker.on('click', this.newWindow)
-      // 地图选点放入list便于清除
-      this.markerList.push(marker)
+      ` : ''
+      this.currentMarker.on('mouseover', this.openInfo)
+      this.currentMarker.on('mouseout', this.closeInfo)
+      this.currentMarker.on('click', this.newWindow)
     },
     // 获取选点详细信息
     getPotContent (lnglat) {
@@ -98,6 +98,7 @@ export default {
       return new Promise((resolve, reject) => {
         this.axiosPost('/info', param).then(res => {
           if (res.success) {
+            console.log('Info: ', res.model)
             resolve(res.model || {})
           } else {
             reject(res.errorMessage)
@@ -110,7 +111,7 @@ export default {
     // 生成详情弹框
     newWindow (e) {
       // 地图定位到选点
-      this.map.setCenter(e.target.getPosition());
+      // this.map.setCenter(e.target.getPosition());
       this.map.setZoomAndCenter(15, e.target.getPosition());
       
       // let infoWindow = new AMap.InfoWindow({offset: new AMap.Pixel(0, -30)});
@@ -153,7 +154,9 @@ export default {
         this.overlays = {}
       }
       // 清除地图选点
-      this.map.remove(this.markerList)
+      if (this.currentMarker) {
+        this.map.remove(this.currentMarker)
+      }
     },
     // 确认选择 发请求
     handleSendMap () {
@@ -166,7 +169,7 @@ export default {
         return
       }
       if (this.overlays.Ce.radius > 300000) {
-        this.$message.error('半径不能大于10km')
+        this.$message.error('半径不能大于30km')
         return
       }
       const param = {
@@ -182,7 +185,11 @@ export default {
           // 若已有热力图直接set数据，否则创建热力图
           console.log('heatMapData: ', res.model)
           if (this.heatMap) {
-            this.heatMap.setDataSet(res.model)
+            this.heatMap.setDataSet({
+              data: res.model,
+              max: 100
+            })
+            this.handleShowHeat()
           } else {
             this.createHeatMap(res.model)
           }
